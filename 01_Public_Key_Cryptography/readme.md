@@ -2,6 +2,8 @@
 
 This folder contains notes and resources about Public Key Cryptography, which is a fundamental technology behind blockchain and cryptocurrencies.
 
+- **Link:** https://projects.100xdevs.com/tracks/public-private-keys/Public-Key-Cryptography-1
+
 ## What is Public Key Cryptography?
 
 Public Key Cryptography (also called asymmetric cryptography) is a system that uses pairs of keys:

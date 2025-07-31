@@ -1,13 +1,47 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { generateMnemonic, mnemonicToSeedSync } from "bip39"
 import { Keypair } from "@solana/web3.js"
 import { Buffer } from 'buffer'
 import toast from 'react-hot-toast'
+import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy } from 'lucide-react'
 
 function Solana() {
     const [seedPhrase, setSeedPhrase] = useState('')
     const [wallets, setWallets] = useState([])
     const [showPrivateKeys, setShowPrivateKeys] = useState({})
+
+    // Load data from localStorage on component mount
+    useEffect(() => {
+        const savedSeedPhrase = localStorage.getItem('solana_seed_phrase')
+        const savedWallets = localStorage.getItem('solana_wallets')
+        
+        if (savedSeedPhrase) {
+            setSeedPhrase(savedSeedPhrase)
+        }
+        
+        if (savedWallets) {
+            try {
+                setWallets(JSON.parse(savedWallets))
+            } catch (error) {
+                console.error('Error parsing saved wallets:', error)
+            }
+        }
+    }, [])
+
+    // Save to localStorage whenever seedPhrase or wallets change
+    useEffect(() => {
+        if (seedPhrase) {
+            localStorage.setItem('solana_seed_phrase', seedPhrase)
+        }
+    }, [seedPhrase])
+
+    useEffect(() => {
+        if (wallets.length > 0) {
+            localStorage.setItem('solana_wallets', JSON.stringify(wallets))
+        } else {
+            localStorage.removeItem('solana_wallets')
+        }
+    }, [wallets])
 
     // Function to create Solana HD wallet
     const createSolanaWallet = (mnemonic = null, accountIndex = 0) => {
@@ -48,7 +82,27 @@ function Solana() {
         const newSeedPhrase = generateMnemonic()
         setSeedPhrase(newSeedPhrase)
         setWallets([]) // Clear existing wallets when new seed is generated
-        toast.success('Seed phrase generated successfully!')
+        localStorage.removeItem('solana_wallets') // Clear saved wallets
+        toast.success('New seed phrase generated successfully!')
+    }
+
+    const removeWallet = (walletId) => {
+        setWallets(prev => prev.filter(wallet => wallet.id !== walletId))
+        setShowPrivateKeys(prev => {
+            const updated = { ...prev }
+            delete updated[walletId]
+            return updated
+        })
+        toast.success('Wallet removed successfully!')
+    }
+
+    const clearAllData = () => {
+        setSeedPhrase('')
+        setWallets([])
+        setShowPrivateKeys({})
+        localStorage.removeItem('solana_seed_phrase')
+        localStorage.removeItem('solana_wallets')
+        toast.success('All Solana wallet data cleared!')
     }
 
     const createWallet = () => {
@@ -88,12 +142,25 @@ function Solana() {
 
             {/* Seed Phrase Generation */}
             <div className="mb-6">
-                <button
-                    onClick={generateSeedPhrase}
-                    className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                >
-                    Generate Seed Phrase
-                </button>
+                <div className="flex gap-3 flex-wrap">
+                    <button
+                        onClick={generateSeedPhrase}
+                        className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                        <RefreshCw size={18} />
+                        {seedPhrase ? 'Regenerate Seed Phrase' : 'Generate Seed Phrase'}
+                    </button>
+                    
+                    {(seedPhrase || wallets.length > 0) && (
+                        <button
+                            onClick={clearAllData}
+                            className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+                        >
+                            <Trash2 size={18} />
+                            Clear All Data
+                        </button>
+                    )}
+                </div>
 
                 {seedPhrase && (
                     <div className="mt-4 p-4 bg-white rounded-lg border">
@@ -103,8 +170,9 @@ function Solana() {
                         </div>
                         <button
                             onClick={() => copyToClipboard(seedPhrase)}
-                            className="mt-2 text-purple-600 hover:text-purple-800 text-sm"
+                            className="mt-2 text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
                         >
+                            <Copy size={14} />
                             Copy Seed Phrase
                         </button>
                     </div>
@@ -116,9 +184,10 @@ function Solana() {
                 <div className="mb-6">
                     <button
                         onClick={createWallet}
-                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
                     >
-                        Create HD Wallet
+                        <Plus size={18} />
+                        Add New Wallet
                     </button>
                 </div>
             )}
@@ -132,7 +201,16 @@ function Solana() {
                             <div key={wallet.id} className="bg-white p-4 rounded-lg border">
                                 <div className="flex justify-between items-center mb-2">
                                     <h4 className="font-medium">Wallet #{wallet.index + 1}</h4>
-                                    <span className="text-sm text-gray-500">{wallet.path}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-gray-500">{wallet.path}</span>
+                                        <button
+                                            onClick={() => removeWallet(wallet.id)}
+                                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                                            title="Remove wallet"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -144,8 +222,9 @@ function Solana() {
                                             </code>
                                             <button
                                                 onClick={() => copyToClipboard(wallet.publicKey)}
-                                                className="text-purple-600 hover:text-purple-800 text-sm"
+                                                className="text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
                                             >
+                                                <Copy size={14} />
                                                 Copy
                                             </button>
                                         </div>
@@ -159,15 +238,17 @@ function Solana() {
                                             </code>
                                             <button
                                                 onClick={() => togglePrivateKey(wallet.id)}
-                                                className="text-purple-600 hover:text-purple-800 text-sm"
+                                                className="text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
                                             >
+                                                {showPrivateKeys[wallet.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 {showPrivateKeys[wallet.id] ? 'Hide' : 'Show'}
                                             </button>
                                             {showPrivateKeys[wallet.id] && (
                                                 <button
                                                     onClick={() => copyToClipboard(wallet.privateKey)}
-                                                    className="text-purple-600 hover:text-purple-800 text-sm"
+                                                    className="text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
                                                 >
+                                                    <Copy size={14} />
                                                     Copy
                                                 </button>
                                             )}

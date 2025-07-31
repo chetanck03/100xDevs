@@ -1,12 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Ethereum from './Ethereum'
 import Solana from './Solana'
 
 function Wallet() {
     const [selectedBlockchain, setSelectedBlockchain] = useState('')
 
+    // Load selected blockchain from localStorage on component mount
+    useEffect(() => {
+        const savedBlockchain = localStorage.getItem('selected_blockchain')
+        if (savedBlockchain) {
+            setSelectedBlockchain(savedBlockchain)
+        }
+    }, [])
+
     const handleBlockchainSelect = (blockchain) => {
         setSelectedBlockchain(blockchain)
+        localStorage.setItem('selected_blockchain', blockchain)
     }
 
     return (

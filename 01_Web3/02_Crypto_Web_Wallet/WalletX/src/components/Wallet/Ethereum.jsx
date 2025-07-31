@@ -1,12 +1,46 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ethers } from "ethers"
 import { generateMnemonic } from "bip39"
 import toast from 'react-hot-toast'
+import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy } from 'lucide-react'
 
 function Ethereum() {
     const [seedPhrase, setSeedPhrase] = useState('')
     const [wallets, setWallets] = useState([])
     const [showPrivateKeys, setShowPrivateKeys] = useState({})
+
+    // Load data from localStorage on component mount
+    useEffect(() => {
+        const savedSeedPhrase = localStorage.getItem('ethereum_seed_phrase')
+        const savedWallets = localStorage.getItem('ethereum_wallets')
+        
+        if (savedSeedPhrase) {
+            setSeedPhrase(savedSeedPhrase)
+        }
+        
+        if (savedWallets) {
+            try {
+                setWallets(JSON.parse(savedWallets))
+            } catch (error) {
+                console.error('Error parsing saved wallets:', error)
+            }
+        }
+    }, [])
+
+    // Save to localStorage whenever seedPhrase or wallets change
+    useEffect(() => {
+        if (seedPhrase) {
+            localStorage.setItem('ethereum_seed_phrase', seedPhrase)
+        }
+    }, [seedPhrase])
+
+    useEffect(() => {
+        if (wallets.length > 0) {
+            localStorage.setItem('ethereum_wallets', JSON.stringify(wallets))
+        } else {
+            localStorage.removeItem('ethereum_wallets')
+        }
+    }, [wallets])
 
     // Function to create Ethereum HD wallet
     const createEthereumWallet = (mnemonic = null, accountIndex = 0) => {
@@ -36,7 +70,27 @@ function Ethereum() {
         const newSeedPhrase = generateMnemonic()
         setSeedPhrase(newSeedPhrase)
         setWallets([]) // Clear existing wallets when new seed is generated
-        toast.success('Seed phrase generated successfully!')
+        localStorage.removeItem('ethereum_wallets') // Clear saved wallets
+        toast.success('New seed phrase generated successfully!')
+    }
+
+    const removeWallet = (walletId) => {
+        setWallets(prev => prev.filter(wallet => wallet.id !== walletId))
+        setShowPrivateKeys(prev => {
+            const updated = { ...prev }
+            delete updated[walletId]
+            return updated
+        })
+        toast.success('Wallet removed successfully!')
+    }
+
+    const clearAllData = () => {
+        setSeedPhrase('')
+        setWallets([])
+        setShowPrivateKeys({})
+        localStorage.removeItem('ethereum_seed_phrase')
+        localStorage.removeItem('ethereum_wallets')
+        toast.success('All Ethereum wallet data cleared!')
     }
 
     const createWallet = () => {
@@ -76,12 +130,25 @@ function Ethereum() {
 
             {/* Seed Phrase Generation */}
             <div className="mb-6">
-                <button
-                    onClick={generateSeedPhrase}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                    Generate Seed Phrase
-                </button>
+                <div className="flex gap-3 flex-wrap">
+                    <button
+                        onClick={generateSeedPhrase}
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                        <RefreshCw size={18} />
+                        {seedPhrase ? 'Regenerate Seed Phrase' : 'Generate Seed Phrase'}
+                    </button>
+                    
+                    {(seedPhrase || wallets.length > 0) && (
+                        <button
+                            onClick={clearAllData}
+                            className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+                        >
+                            <Trash2 size={18} />
+                            Clear All Data
+                        </button>
+                    )}
+                </div>
 
                 {seedPhrase && (
                     <div className="mt-4 p-4 bg-white rounded-lg border">
@@ -91,8 +158,9 @@ function Ethereum() {
                         </div>
                         <button
                             onClick={() => copyToClipboard(seedPhrase)}
-                            className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                            className="mt-2 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
                         >
+                            <Copy size={14} />
                             Copy Seed Phrase
                         </button>
                     </div>
@@ -104,9 +172,10 @@ function Ethereum() {
                 <div className="mb-6">
                     <button
                         onClick={createWallet}
-                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
                     >
-                        Create HD Wallet
+                        <Plus size={18} />
+                        Add New Wallet
                     </button>
                 </div>
             )}
@@ -120,7 +189,16 @@ function Ethereum() {
                             <div key={wallet.id} className="bg-white p-4 rounded-lg border">
                                 <div className="flex justify-between items-center mb-2">
                                     <h4 className="font-medium">Wallet #{wallet.index + 1}</h4>
-                                    <span className="text-sm text-gray-500">{wallet.path}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-gray-500">{wallet.path}</span>
+                                        <button
+                                            onClick={() => removeWallet(wallet.id)}
+                                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                                            title="Remove wallet"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -132,8 +210,9 @@ function Ethereum() {
                                             </code>
                                             <button
                                                 onClick={() => copyToClipboard(wallet.publicKey)}
-                                                className="text-blue-600 hover:text-blue-800 text-sm"
+                                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
                                             >
+                                                <Copy size={14} />
                                                 Copy
                                             </button>
                                         </div>
@@ -147,15 +226,17 @@ function Ethereum() {
                                             </code>
                                             <button
                                                 onClick={() => togglePrivateKey(wallet.id)}
-                                                className="text-blue-600 hover:text-blue-800 text-sm"
+                                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
                                             >
+                                                {showPrivateKeys[wallet.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 {showPrivateKeys[wallet.id] ? 'Hide' : 'Show'}
                                             </button>
                                             {showPrivateKeys[wallet.id] && (
                                                 <button
                                                     onClick={() => copyToClipboard(wallet.privateKey)}
-                                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
                                                 >
+                                                    <Copy size={14} />
                                                     Copy
                                                 </button>
                                             )}

@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { generateMnemonic, mnemonicToSeedSync } from "bip39"
 import { Keypair } from "@solana/web3.js"
+import { useNavigate } from 'react-router-dom'
 import { Buffer } from 'buffer'
 import toast from 'react-hot-toast'
-import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy, Send } from 'lucide-react'
 
 function Solana() {
+    const navigate = useNavigate()
     const [seedPhrase, setSeedPhrase] = useState('')
     const [wallets, setWallets] = useState([])
     const [showPrivateKeys, setShowPrivateKeys] = useState({})
+    const [showSeedPhrase, setShowSeedPhrase] = useState(false)
 
     // Load data from localStorage on component mount
     useEffect(() => {
@@ -100,6 +103,7 @@ function Solana() {
         setSeedPhrase('')
         setWallets([])
         setShowPrivateKeys({})
+        setShowSeedPhrase(false)
         localStorage.removeItem('solana_seed_phrase')
         localStorage.removeItem('solana_wallets')
         toast.success('All Solana wallet data cleared!')
@@ -131,9 +135,17 @@ function Solana() {
         }))
     }
 
+    const toggleSeedPhrase = () => {
+        setShowSeedPhrase(prev => !prev)
+    }
+
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text)
         toast.success('Copied to clipboard!')
+    }
+
+    const handleSendTransaction = (publicKey) => {
+        navigate(`/transaction/solana/${publicKey}`)
     }
 
     return (
@@ -165,16 +177,27 @@ function Solana() {
                 {seedPhrase && (
                     <div className="mt-4 p-4 bg-white rounded-lg border">
                         <h3 className="font-semibold mb-2">Seed Phrase (Keep this secure!):</h3>
-                        <div className="bg-gray-100 p-3 rounded text-sm font-mono break-all">
-                            {seedPhrase}
+                        <div className="flex items-center gap-2">
+                            <div className="bg-gray-100 p-3 rounded text-sm font-mono break-all flex-1">
+                                {showSeedPhrase ? seedPhrase : '•'.repeat(seedPhrase.split(' ').length * 6)}
+                            </div>
+                            <button
+                                onClick={toggleSeedPhrase}
+                                className="text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
+                            >
+                                {showSeedPhrase ? <EyeOff size={14} /> : <Eye size={14} />}
+                                {showSeedPhrase ? 'Hide' : 'Show'}
+                            </button>
                         </div>
-                        <button
-                            onClick={() => copyToClipboard(seedPhrase)}
-                            className="mt-2 text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
-                        >
-                            <Copy size={14} />
-                            Copy Seed Phrase
-                        </button>
+                        {showSeedPhrase && (
+                            <button
+                                onClick={() => copyToClipboard(seedPhrase)}
+                                className="mt-2 text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
+                            >
+                                <Copy size={14} />
+                                Copy Seed Phrase
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
@@ -203,6 +226,14 @@ function Solana() {
                                     <h4 className="font-medium">Wallet #{wallet.index + 1}</h4>
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm text-gray-500">{wallet.path}</span>
+                                        <button
+                                            onClick={() => handleSendTransaction(wallet.publicKey)}
+                                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center gap-1"
+                                            title="Send transaction"
+                                        >
+                                            <Send size={14} />
+                                            Send
+                                        </button>
                                         <button
                                             onClick={() => removeWallet(wallet.id)}
                                             className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"

@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { ethers } from "ethers"
 import { generateMnemonic } from "bip39"
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy, Send } from 'lucide-react'
 
 function Ethereum() {
+    const navigate = useNavigate()
     const [seedPhrase, setSeedPhrase] = useState('')
     const [wallets, setWallets] = useState([])
     const [showPrivateKeys, setShowPrivateKeys] = useState({})
+    const [showSeedPhrase, setShowSeedPhrase] = useState(false)
 
     // Load data from localStorage on component mount
     useEffect(() => {
         const savedSeedPhrase = localStorage.getItem('ethereum_seed_phrase')
         const savedWallets = localStorage.getItem('ethereum_wallets')
-        
+
         if (savedSeedPhrase) {
             setSeedPhrase(savedSeedPhrase)
         }
-        
+
         if (savedWallets) {
             try {
                 setWallets(JSON.parse(savedWallets))
@@ -74,6 +77,43 @@ function Ethereum() {
         toast.success('New seed phrase generated successfully!')
     }
 
+    const importSeedPhrase = (importedPhrase) => {
+        try {
+            // Validate the seed phrase
+            const trimmedPhrase = importedPhrase.trim()
+            if (!trimmedPhrase) {
+                toast.error('Please enter a seed phrase')
+                return false
+            }
+
+            // Check if it's a valid mnemonic (12 or 24 words)
+            const words = trimmedPhrase.split(' ').filter(word => word.length > 0)
+            if (words.length !== 12 && words.length !== 24) {
+                toast.error('Seed phrase must be 12 or 24 words')
+                return false
+            }
+
+            // Test if we can create a wallet with this phrase
+            const testWallet = createEthereumWallet(trimmedPhrase, 0)
+            if (!testWallet) {
+                toast.error('Invalid seed phrase')
+                return false
+            }
+
+            // If valid, set the seed phrase and clear existing wallets
+            setSeedPhrase(trimmedPhrase)
+            setWallets([])
+            setShowPrivateKeys({})
+            localStorage.removeItem('ethereum_wallets')
+            toast.success('Seed phrase imported successfully!')
+            return true
+        } catch (error) {
+            console.error('Error importing seed phrase:', error)
+            toast.error('Invalid seed phrase')
+            return false
+        }
+    }
+
     const removeWallet = (walletId) => {
         setWallets(prev => prev.filter(wallet => wallet.id !== walletId))
         setShowPrivateKeys(prev => {
@@ -88,6 +128,7 @@ function Ethereum() {
         setSeedPhrase('')
         setWallets([])
         setShowPrivateKeys({})
+        setShowSeedPhrase(false)
         localStorage.removeItem('ethereum_seed_phrase')
         localStorage.removeItem('ethereum_wallets')
         toast.success('All Ethereum wallet data cleared!')
@@ -119,9 +160,17 @@ function Ethereum() {
         }))
     }
 
+    const toggleSeedPhrase = () => {
+        setShowSeedPhrase(prev => !prev)
+    }
+
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text)
         toast.success('Copied to clipboard!')
+    }
+
+    const handleSendTransaction = (publicKey) => {
+        navigate(`/transaction/ethereum/${publicKey}`)
     }
 
     return (
@@ -138,7 +187,7 @@ function Ethereum() {
                         <RefreshCw size={18} />
                         {seedPhrase ? 'Regenerate Seed Phrase' : 'Generate Seed Phrase'}
                     </button>
-                    
+
                     {(seedPhrase || wallets.length > 0) && (
                         <button
                             onClick={clearAllData}
@@ -153,16 +202,27 @@ function Ethereum() {
                 {seedPhrase && (
                     <div className="mt-4 p-4 bg-white rounded-lg border">
                         <h3 className="font-semibold mb-2">Seed Phrase (Keep this secure!):</h3>
-                        <div className="bg-gray-100 p-3 rounded text-sm font-mono break-all">
-                            {seedPhrase}
+                        <div className="flex items-center gap-2">
+                            <div className="bg-gray-100 p-3 rounded text-sm font-mono break-all flex-1">
+                                {showSeedPhrase ? seedPhrase : '•'.repeat(seedPhrase.split(' ').length * 6)}
+                            </div>
+                            <button
+                                onClick={toggleSeedPhrase}
+                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                            >
+                                {showSeedPhrase ? <EyeOff size={14} /> : <Eye size={14} />}
+                                {showSeedPhrase ? 'Hide' : 'Show'}
+                            </button>
                         </div>
-                        <button
-                            onClick={() => copyToClipboard(seedPhrase)}
-                            className="mt-2 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
-                        >
-                            <Copy size={14} />
-                            Copy Seed Phrase
-                        </button>
+                        {showSeedPhrase && (
+                            <button
+                                onClick={() => copyToClipboard(seedPhrase)}
+                                className="mt-2 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                            >
+                                <Copy size={14} />
+                                Copy Seed Phrase
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
@@ -191,6 +251,14 @@ function Ethereum() {
                                     <h4 className="font-medium">Wallet #{wallet.index + 1}</h4>
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm text-gray-500">{wallet.path}</span>
+                                        <button
+                                            onClick={() => handleSendTransaction(wallet.publicKey)}
+                                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center gap-1"
+                                            title="Send transaction"
+                                        >
+                                            <Send size={14} />
+                                            Send
+                                        </button>
                                         <button
                                             onClick={() => removeWallet(wallet.id)}
                                             className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"

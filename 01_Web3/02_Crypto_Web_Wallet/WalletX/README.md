@@ -46,6 +46,8 @@ Using derivation paths, multiple wallets can be generated from a single seed:
 - `0` = External addresses (receiving)
 - `0` = Address index
 
+![alt text](image.png)
+
 **Solana Path**: `m/44'/501'/0'/0'`
 - `44'` = BIP-44 standard
 - `501'` = Solana coin type

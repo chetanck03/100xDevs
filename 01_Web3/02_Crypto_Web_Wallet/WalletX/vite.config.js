@@ -8,4 +8,17 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+    },
+  },
+  optimizeDeps: {
+    include: ['buffer', 'crypto-browserify', 'stream-browserify'],
+  },
 })

@@ -133,7 +133,7 @@ function EthereumTransaction({ walletData }) {
 
   const openFaucet = () => {
     if (network === 'sepolia') {
-      window.open('https://sepoliafaucet.com/', '_blank')
+      window.open('https://cloud.google.com/application/web3/faucet/ethereum/sepolia', '_blank')
     } else {
       toast.error('Faucets are only available for testnets')
     }

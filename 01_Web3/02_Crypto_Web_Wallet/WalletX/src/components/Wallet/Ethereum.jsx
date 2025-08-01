@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { ethers } from "ethers"
-import { generateMnemonic } from "bip39"
+import { generateMnemonic, validateMnemonic } from "bip39"
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy, Send } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Eye, EyeOff, Copy, Send, Download } from 'lucide-react'
 
 function Ethereum() {
     const navigate = useNavigate()
@@ -11,6 +11,8 @@ function Ethereum() {
     const [wallets, setWallets] = useState([])
     const [showPrivateKeys, setShowPrivateKeys] = useState({})
     const [showSeedPhrase, setShowSeedPhrase] = useState(false)
+    const [showImportModal, setShowImportModal] = useState(false)
+    const [importSeedInput, setImportSeedInput] = useState('')
 
     // Load data from localStorage on component mount
     useEffect(() => {
@@ -86,17 +88,16 @@ function Ethereum() {
                 return false
             }
 
-            // Check if it's a valid mnemonic (12 or 24 words)
-            const words = trimmedPhrase.split(' ').filter(word => word.length > 0)
-            if (words.length !== 12 && words.length !== 24) {
-                toast.error('Seed phrase must be 12 or 24 words')
+            // Validate using bip39
+            if (!validateMnemonic(trimmedPhrase)) {
+                toast.error('Invalid seed phrase. Please check your words and try again.')
                 return false
             }
 
             // Test if we can create a wallet with this phrase
             const testWallet = createEthereumWallet(trimmedPhrase, 0)
             if (!testWallet) {
-                toast.error('Invalid seed phrase')
+                toast.error('Failed to create wallet from seed phrase')
                 return false
             }
 
@@ -112,6 +113,18 @@ function Ethereum() {
             toast.error('Invalid seed phrase')
             return false
         }
+    }
+
+    const handleImportSubmit = () => {
+        if (importSeedPhrase(importSeedInput)) {
+            setShowImportModal(false)
+            setImportSeedInput('')
+        }
+    }
+
+    const handleImportCancel = () => {
+        setShowImportModal(false)
+        setImportSeedInput('')
     }
 
     const removeWallet = (walletId) => {
@@ -186,6 +199,14 @@ function Ethereum() {
                     >
                         <RefreshCw size={18} />
                         {seedPhrase ? 'Regenerate Seed Phrase' : 'Generate Seed Phrase'}
+                    </button>
+
+                    <button
+                        onClick={() => setShowImportModal(true)}
+                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                        <Download size={18} />
+                        Import Seed Phrase
                     </button>
 
                     {(seedPhrase || wallets.length > 0) && (
@@ -313,6 +334,40 @@ function Ethereum() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Import Seed Phrase Modal */}
+            {showImportModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold mb-4">Import Seed Phrase</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Enter your existing seed phrase to import your wallet. This will replace any current seed phrase.
+                        </p>
+                        <textarea
+                            value={importSeedInput}
+                            onChange={(e) => setImportSeedInput(e.target.value)}
+                            placeholder="Enter your 12 or 24 word seed phrase..."
+                            className="w-full p-3 border border-gray-300 rounded-lg resize-none h-24 text-sm"
+                            rows={3}
+                        />
+                        <div className="flex gap-3 mt-4">
+                            <button
+                                onClick={handleImportSubmit}
+                                disabled={!importSeedInput.trim()}
+                                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Import
+                            </button>
+                            <button
+                                onClick={handleImportCancel}
+                                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -1,7 +1,10 @@
 # Solana Airdrop DApp
-Link : https://petal-estimate-4e9.notion.site/Wallet-adapter-860feade9cb940cea696eedf4fc61251
+Live: https://airdrop-solana-free.vercel.app/
 
 A React-based decentralized application (DApp) that allows users to connect their Solana wallet and request SOL airdrops on the Solana devnet.
+
+Link : https://petal-estimate-4e9.notion.site/Wallet-adapter-860feade9cb940cea696eedf4fc61251
+
 ![alt text](image.png)
 ## Features
 
